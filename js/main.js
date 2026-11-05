@@ -18,6 +18,7 @@ const NEEDS_PERMISSION = HAS_ORIENTATION && typeof DeviceOrientationEvent.reques
 const TOUCH_DEVICE = (navigator.maxTouchPoints || 0) > 0;
 const ZOOM_MIN = 0.72, ZOOM_MAX = 1.4;
 const BREAK_AFTER = 20 * 60;
+const PER_CAT = 10;           // picks per category on the sphere
 
 const look = new Look();
 let canvas, gl, intro, tiles, player, views;
@@ -31,7 +32,7 @@ let deepLink = null;
 
 const app = {
   mode: 'boot',          // 'intro' | 'home' | 'player'
-  cat: 'music',
+  cat: 'musician',
   yours: [],             // videos added on this device
   overlay: null,         // the sheet or panel that's open, if any
   playing: null,
@@ -48,7 +49,7 @@ function cats() {
   return app.yours.length ? [...CATEGORIES, { id: 'yours', name: 'Yours' }] : CATEGORIES;
 }
 function catName(id) { return (cats().find(c => c.id === id) || {}).name || ''; }
-function items(cat) { return cat === 'yours' ? app.yours.slice(0, 20) : (BY_CAT[cat] || []); }
+function items(cat) { return cat === 'yours' ? app.yours.slice(0, PER_CAT) : (BY_CAT[cat] || []); }
 function sphereItems(cat) { return items(cat).map(it => (store.s.hideIntense && it.comfort === 3 ? null : it)); }
 function findItem(id) { return ALL.find(it => it.id === id) || app.yours.find(it => it.id === id) || null; }
 function nextItem(item) {
@@ -354,7 +355,7 @@ function enterHome(base) {
   if (!store.d.introSeen) { store.d.introSeen = true; store.save(); }
   setLayer('home');
   syncLook();
-  if (!cats().some(c => c.id === app.cat)) app.cat = 'music';
+  if (!cats().some(c => c.id === app.cat)) app.cat = 'musician';
   tiles.setItems(sphereItems(app.cat), look.heading(), { animate: false });
   tiles.rise = app.reduced ? 1 : 0;
   renderChips();
@@ -379,7 +380,7 @@ function openDeepLink() {
 }
 
 function setCategory(id, { animate = true } = {}) {
-  if (!cats().some(c => c.id === id)) id = 'music';
+  if (!cats().some(c => c.id === id)) id = 'musician';
   const changed = id !== app.cat;
   app.cat = id;
   store.d.lastCategory = id; store.save();
@@ -762,7 +763,7 @@ function yoursItem(rec, i) {
 
 async function loadYours() {
   const recs = await videos.all();
-  app.yours = recs.slice(0, 20).map(yoursItem);
+  app.yours = recs.slice(0, PER_CAT).map(yoursItem);
   renderChips();
   if (store.d.lastCategory === 'yours' && app.yours.length && app.mode === 'home' && app.cat !== 'yours') setCategory('yours', { animate: false });
 }
@@ -797,7 +798,7 @@ function probeVideo(url) {
 async function addVideoFile(file) {
   if (!file) return false;
   if (!/^video\//.test(file.type) && !/\.(mp4|m4v|mov|webm)$/i.test(file.name)) { toast('That file isn’t a video.'); return false; }
-  if (app.yours.length >= 20) { toast('Yours holds 20 videos. Remove one first.'); return false; }
+  if (app.yours.length >= PER_CAT) { toast(`Yours holds ${PER_CAT} videos. Remove one first.`); return false; }
   toast('Adding “' + file.name + '”…', 9000);
   const url = URL.createObjectURL(file);
   const meta = await probeVideo(url);
@@ -829,7 +830,7 @@ async function removeVideo(id) {
   await videos.remove(id);
   store.d.saved = store.d.saved.filter(s => s !== id); store.save();
   renderChips();
-  if (app.cat === 'yours') { if (app.yours.length) app.refreshSphere(); else setCategory('music', { animate: false }); }
+  if (app.cat === 'yours') { if (app.yours.length) app.refreshSphere(); else setCategory('musician', { animate: false }); }
 }
 app.removeVideo = removeVideo;
 
@@ -840,7 +841,7 @@ async function resetAll() {
   store.reset();
   look.invert = false; look.glide = !app.reduced;
   look.setPrefer(look.motion === 'on' ? 'motion' : 'touch');
-  app.cat = 'music';
+  app.cat = 'musician';
   renderChips();
   app.refreshSphere();
   syncLook();
@@ -880,7 +881,7 @@ function start() {
   look.prefer = store.s.look === 'touch' ? 'touch' : 'motion';
   look.invert = store.s.invert;
   look.glide = store.s.glide && !app.reduced;
-  app.cat = BY_CAT[store.d.lastCategory] ? store.d.lastCategory : 'music';
+  app.cat = BY_CAT[store.d.lastCategory] ? store.d.lastCategory : 'musician';
   const m = /^#v-([\w-]+)$/.exec(location.hash || '');
   if (m) deepLink = m[1];
 

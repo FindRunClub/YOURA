@@ -524,7 +524,7 @@ export function createViews(app) {
         ...yours),
       group('About',
         h('div', { class: 'set-row col' },
-          h('p', { class: 'set-desc' }, 'This build plays 80 demo scenes drawn live in code. They stand in for the licensed 360° videos YOURA will stream, and labels like 3D show how real videos will be marked.'),
+          h('p', { class: 'set-desc' }, 'This build plays 30 demo scenes drawn live in code. They stand in for the licensed 360° videos YOURA will stream, and labels like 3D show how real videos will be marked.'),
           h('p', { class: 'set-desc' }, 'For motion tracking on iPhone, open YOURA in Safari from its own web address and allow Motion & Orientation when asked. Add it to your Home Screen to open it full screen.')),
         h('div', { class: 'set-row' }, reset))
     );

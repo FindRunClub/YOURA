@@ -22,7 +22,7 @@ const DEFAULTS = () => ({
   firstRunDone: false,
   introSeen: false,
   firstPlayDone: false,
-  lastCategory: 'music'
+  lastCategory: 'musician'
 });
 
 function load() {

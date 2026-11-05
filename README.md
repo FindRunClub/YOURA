@@ -2,20 +2,20 @@
 
 Curated 360° video that you look around by moving your phone.
 
-YOURA opens with **Into the Dot**, its 360° intro. When you land inside the white dot, the 20 picks for a category rise around you on the planet. You turn your phone (or drag) to look across them. Tap one for a preview, then watch it in YOURA's own 360° player, which follows the gyroscope from the first frame.
+YOURA opens with **Into the Dot**, its 360° intro. When you land inside the white dot, the 10 picks for a category rise in front of you on the planet. You turn your phone (or drag) to look across them. Tap one for a preview, then watch it in YOURA's own 360° player, which follows the gyroscope from the first frame.
 
 This is a working web app (a PWA), built mobile-first for iPhone. It has no build step and no dependencies.
 
 ## What's in this build
 
 - **Intro.** The original Into the Dot shader, unchanged. It runs Full, Short or Off (after the first launch), with Skip.
-- **Home sphere.** Two rows of 10 tiles, one column every 36°.
-  - #1 and #2 sit straight ahead, then the picks alternate right and left; #19 and #20 sit behind you.
+- **Home sphere.** Two rows of 5 tiles, one column every 36°, spanning 72° left to 72° right.
+  - #1 and #2 sit straight ahead, then the picks alternate right and left; #9 and #10 sit furthest out.
   - Each tile shows a live preview, with rank, length, comfort bars, NEW, 3D, saved and watched marks.
   - Look at a tile to focus it, or tap one to open its preview.
   - The compass turns you to face #1, and the edge arrows turn one column.
   - Long-press a tile to save it.
-- **Categories.** Music, Sports, Travel and Nature, with 20 each, plus Yours for videos you add.
+- **Categories.** Musician, Athlete and Character, with 10 each, plus Yours for videos you add.
   - A switch sinks the old tiles and raises the new ones, with the new #1 wherever you're looking.
 - **Looking around.**
   - Motion uses the full device orientation: turn, tilt, and roll with the horizon kept level.
@@ -35,11 +35,11 @@ This is a working web app (a PWA), built mobile-first for iPhone. It has no buil
   - A flat view of the same picks for anyone who can't or doesn't want to look around.
   - Screen readers get a skip link to it.
 - **Settings.** Every option above, plus Replay the intro, Add a 360° video, and Reset.
-- **Share.** Links open straight to a video's preview (`#v-music-03`).
+- **Share.** Links open straight to a video's preview (`#v-musician-03`).
 
 ### Demo content
 
-The 80 catalog entries are **demo scenes drawn live in code**. They stand in for the licensed 360° videos YOURA will stream: concert rigs, a synthwave drive, ocean, aurora, desert, a stadium, freefall above the clouds, deep space, and the ringed YOURA planet.
+The 30 catalog entries are **demo scenes drawn live in code**. They stand in for the licensed 360° videos YOURA will stream: concert rigs, a synthwave drive, ocean, aurora, desert, a stadium, freefall above the clouds, deep space, and the ringed YOURA planet.
 
 They show how the whole experience works end to end, gyroscope included, before any licensing is done.
 
@@ -95,12 +95,12 @@ js/
   views.js           preview sheet, heads-up, first run, Up next, List, Saved, Settings
   intro-src.js       Into the Dot, copied unchanged from the original file
   intro.js           draws the intro, and the planet behind the tiles (sky dimmed)
-  tiles.js           the 20 tiles: layout, live previews, labels atlas, focus, picking
+  tiles.js           the tiles: layout, live previews, labels atlas, focus, picking
   scenes.js          the demo scenes and the equirectangular video shader
   player.js          playback of demo scenes and real 360 video
   look.js            motion (DeviceOrientation → quaternion) plus drag, glide and recenter
   posters.js         still frames of the scenes for the list and sheets
-  catalog.js         the 4 × 20 curated picks
+  catalog.js         the 3 × 10 curated picks
   store.js           settings, saved, watched, reactions; your videos in IndexedDB
   math.js, gl.js, ui.js
 ```

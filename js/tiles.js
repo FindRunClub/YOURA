@@ -1,5 +1,5 @@
-// The 20 tiles around the viewer: two rows of 10, a column every 36 degrees, #1 and #2 straight ahead,
-// then alternating right and left so #19 and #20 sit behind you (see the Sphere layout spec board).
+// The tiles in front of the viewer: two rows, a column every 36 degrees, #1 and #2 straight ahead,
+// then alternating right and left. Ten picks fill five columns, from 72 degrees left to 72 degrees right.
 // Each tile shows a live preview of its scene; labels and badges come from a 2D canvas atlas.
 import { program } from './gl.js';
 import { SCENE_LIB } from './scenes.js';
@@ -86,8 +86,8 @@ export class Tiles {
     const aniso = gl.getExtension('EXT_texture_filter_anisotropic');
     if (aniso) gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
     this.dirty = true;
-    this.items = [];       // current 20
-    this.prevItems = null; // the 20 sinking away during a category switch
+    this.items = [];       // the current picks
+    this.prevItems = null; // the old picks sinking away during a category switch
     this.layout = 0;       // heading of #1
     this.prevLayout = 0;
     this.swap = 1;         // 0..1 progress of a category switch (1 = settled)
