@@ -1,7 +1,7 @@
-// YOURA. The intro, the home sphere and the player share one full-screen WebGL canvas;
-// the interface sits on top of it in HTML.
+// YOURA. The intro plays in its own frame (js/world.js) and stays on as the world behind the home sphere.
+// The tiles and the player draw in one full-screen WebGL canvas over it; the interface sits on top in HTML.
 import { createContext, fullscreenBuffer, fitCanvas } from './gl.js';
-import { IntroRenderer, INTRO } from './intro.js';
+import { World, worldTan, TAN_MIN } from './world.js';
 import { Tiles, slotHeading } from './tiles.js';
 import { Player } from './player.js';
 import { Look } from './look.js';
@@ -10,7 +10,7 @@ import { store, videos } from './store.js';
 import { h, icon, setIcon, mark, toast, fmtTime } from './ui.js';
 import { createViews } from './views.js';
 import { warm as warmPosters } from './posters.js';
-import { DEG, clamp, wrapPi, norm, add, scale, basisFromQ, smoothstep, easeInOut } from './math.js';
+import { DEG, clamp, wrapPi, norm, add, scale, basisFromQ, smoothstep, easeInOut, qMul, yawQ, pitchQ } from './math.js';
 
 const root = document.getElementById('app');
 const HAS_ORIENTATION = typeof window.DeviceOrientationEvent !== 'undefined';
@@ -21,9 +21,9 @@ const BREAK_AFTER = 20 * 60;
 const PER_CAT = 10;           // picks per category on the sphere
 
 const look = new Look();
-let canvas, gl, intro, tiles, player, views;
+let canvas, gl, world, tiles, player, views;
 let quality = 1, emaDt = 1 / 60, slowFor = 0, fastFor = 0;
-let introT = 0, introEnd = INTRO.T_END, homeBase = INTRO.T_END, homeT = 0, dimK = 0;
+let introT = 0, introEnd = 22, homeBase = 22, homeT = 0, dimK = 0;
 let lastView = null;
 let zoom = 1;
 let lastFocus = -2;
@@ -77,11 +77,13 @@ function boot() {
   try { app.embedded = window.self !== window.top; } catch (e) { app.embedded = true; }
   canvas = h('canvas', { class: 'gl', role: 'img', 'aria-label': '360 degree view. Turn your phone, or drag, to look around.' });
   root.append(canvas);
-  gl = createContext(canvas);
+  world = new World(root);
+  E.worldDim = h('div', { class: 'world-dim', 'aria-hidden': 'true' });
+  canvas.before(E.worldDim);
+  gl = createContext(canvas, { alpha: true });
   if (!gl) { fallback('This device can’t draw YOURA’s 360° view, because WebGL is off or unavailable.'); return false; }
   try {
     const quad = fullscreenBuffer(gl);
-    intro = new IntroRenderer(gl, quad);
     tiles = new Tiles(gl);
     player = new Player(gl, quad);
   } catch (err) {
@@ -316,15 +318,18 @@ function startIntro(kind) {
   setLayer('intro');
   look.recenter(0);
   syncLook();
-  if (kind === 'off') {
+  world.show(true);
+  const T = world.T;
+  if (kind === 'off' || world.failed) {
     E.flash.style.transition = 'none'; E.flash.style.background = '#000'; E.flash.style.opacity = '1';
-    introT = INTRO.T_LAND + 1.2;
-    enterHome(INTRO.T_LAND + 1.2);
+    introT = T.END;
+    enterHome(T.END);
     flash('#000', null, { fadeIn: 0, fadeOut: 0.8 });
     return;
   }
-  introT = kind === 'short' ? INTRO.T_SW - 1.7 : 0;
-  introEnd = kind === 'short' ? INTRO.T_LAND + 2.6 : INTRO.T_END;
+  // Short starts just before the jump into the dot and ends once you've landed; the rest plays on behind the tiles.
+  introT = kind === 'short' ? T.SW - 1.7 : 0;
+  introEnd = kind === 'short' ? T.LAND + 2.6 : T.END;
   E.skip.classList.remove('show');
   setTimeout(() => E.skip.classList.add('show'), 900);
   E.introHint.classList.remove('show');
@@ -335,10 +340,10 @@ app.replayIntro = () => startIntro('full');
 
 function skipIntro() {
   if (app.mode !== 'intro') return;
-  if (introT < INTRO.T_LAND) {
-    // cut through the white dot
+  if (introT < world.T.LAND) {
+    // cut through the white dot, landing where the intro ends
     E.skip.classList.remove('show');
-    flash('#fff', () => { if (app.mode === 'intro') { introT = INTRO.T_LAND + 1.2; enterHome(introT); } }, { fadeIn: 0.22, fadeOut: 0.8 });
+    flash('#fff', () => { if (app.mode === 'intro') { introT = world.T.END; enterHome(introT); } }, { fadeIn: 0.22, fadeOut: 0.8 });
   } else {
     enterHome(introT);
   }
@@ -346,9 +351,11 @@ function skipIntro() {
 
 function enterHome(base) {
   if (app.mode === 'intro') {
-    // The intro tilts the camera 3 degrees up on the planet; hand that to the viewer's own look so nothing jumps.
-    const st = INTRO.state(introT);
-    if (st.world === 1 && !look.usingMotion) { look.pitch = clamp(look.pitch + st.pitch, -85 * DEG, 85 * DEG); look.yaw -= st.yaw; }
+    // The intro's own camera has panned and tilted; hand that to the viewer's look so nothing jumps.
+    const v = world.introView(introT, look.heading(), look.elevation());
+    if (look.usingMotion) look.yawOff = wrapPi(look.yawOff + v.heading - look.heading());
+    else { look.yaw = v.heading; look.pitch = clamp(v.elevation, -85 * DEG, 85 * DEG); }
+    look.stopGlide(); look.anim = null;
   }
   app.mode = 'home';
   homeBase = base; homeT = 0; dimK = app.reduced ? 1 : 0;
@@ -405,6 +412,7 @@ function watch(item, { skipHeadsUp = false } = {}) {
   app.playing = item;
   zoom = 1;
   player.open(item);
+  world.show(false);
   if (store.s.recenter) look.recenter(0);
   setLayer('player');
   E.pTitle.textContent = item.title;
@@ -426,6 +434,7 @@ function exitPlayer() {
   app.playing = null;
   app.mode = 'home';
   dimK = 1;
+  world.show(true);
   setLayer('home');
   syncLook();
   if (item) {
@@ -508,7 +517,7 @@ function govern(dt) {
 }
 
 function playerTan(aspect) {
-  const t = INTRO.TAN_MIN * zoom;
+  const t = TAN_MIN * zoom;
   let tx, ty;
   if (aspect >= 1) { ty = t; tx = t * aspect; } else { tx = t; ty = t / aspect; }
   const cap = 1.7;
@@ -525,14 +534,25 @@ function frame(now) {
   look.update(dt);
   const { pw, ph } = fitCanvas(canvas, 2 * quality, 3.2e6 * quality * quality);
 
-  if (app.mode === 'intro') {
-    introT += dt;
-    lastView = intro.draw(introT, look.quat(), pw, ph, { dim: 0, scripted: true, reduced: app.reduced });
-    if (introT >= introEnd) enterHome(introT);
-  } else if (app.mode === 'home') {
-    homeT += dt;
+  if (app.mode === 'intro' || app.mode === 'home') {
+    // the world: the intro's own picture, in its frame under this canvas
+    const hd = look.heading(), el = look.elevation();
+    gl.viewport(0, 0, pw, ph);
+    if (world.failed) gl.clearColor(0.05, 0.02, 0.03, 1); else gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    const onPlanet = app.mode === 'home' || introT >= world.T.SW;
+    lastView = { B: basisFromQ(qMul(yawQ(hd), pitchQ(el))), tan: worldTan(pw / ph, onPlanet) };
+    if (app.mode === 'intro') {
+      if (world.api) { introT += dt; world.renderIntro(introT, hd, el); }
+      if (introT >= introEnd) enterHome(introT);
+    } else {
+      homeT += dt;
+      world.renderHome(homeBase + homeT, hd, el);
+    }
+  }
+  if (app.mode === 'home') {
     dimK = Math.min(1, dimK + dt / 1.6);
-    lastView = intro.draw(homeBase + homeT, look.quat(), pw, ph, { dim: easeInOut(dimK), scripted: false, reduced: app.reduced });
+    E.worldDim.style.opacity = (0.42 * easeInOut(dimK)).toFixed(3);
     tiles.update(dt, lastView.B.F);
     tiles.draw(lastView.B, lastView.tan, now / 1000);
     updateHomeHud();
@@ -906,8 +926,8 @@ function start() {
   }
 
   const kind = !store.d.introSeen ? 'full' : (store.s.intro || 'short');
-  startIntro(kind);
   requestAnimationFrame(frame);
+  world.ready.then(() => startIntro(kind));
 }
 
 start();

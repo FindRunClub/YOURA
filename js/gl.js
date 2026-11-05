@@ -2,8 +2,8 @@
 
 export function createContext(canvas, opts = {}) {
   const gl = canvas.getContext('webgl', {
-    antialias: false, alpha: false, depth: false, stencil: false,
-    premultipliedAlpha: false, preserveDrawingBuffer: !!opts.preserve, powerPreference: 'high-performance'
+    antialias: false, alpha: !!opts.alpha, depth: false, stencil: false,
+    premultipliedAlpha: !!opts.alpha, preserveDrawingBuffer: !!opts.preserve, powerPreference: 'high-performance'
   });
   if (!gl) return null;
   if (!gl.getExtension('OES_standard_derivatives')) return null;
