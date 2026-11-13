@@ -1,0 +1,4 @@
+node_modules/
+*.exr
+__pycache__/
+.DS_Store
