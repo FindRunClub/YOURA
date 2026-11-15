@@ -129,12 +129,12 @@ export class Theater {
 
   // Call straight from the tap that starts playback: iOS only allows sound from a tap.
   // from: unit vector toward the screen the clip opens out of. heading: where the viewer is looking now.
-  open(item, from, heading, pitch) {
+  open(item, from, heading) {
     this.item = item;
     this.ended = false; this.error = '';
     this.front = heading;
     this.U.uFront.value = heading;
-    this.U.uPitch.value = Math.tan(pitch || 0) * 0;      // the screen sits level
+    this.U.uPitch.value = 0;                            // the giant screen sits level, whatever the phone's tilt
     this.U.uFlat.value = item.projection === 'flat' ? 1 : 0;
     this.U.uStereo.value = item.stereo ? 1 : 0;
     if (from) this.U.uFrom.value.copy(from);

@@ -544,7 +544,7 @@ function watch(item, { skipHeadsUp = false } = {}) {
   app.mode = 'player';
   app.playing = item;
   zoom = 1;
-  theater.open(item, from, front, 0);
+  theater.open(item, from, front);
   setLayer('player');
   E.pTitle.textContent = item.title;
   E.pCreator.textContent = item.creator;

@@ -188,9 +188,10 @@ export function createViews(app) {
   hu.calm.addEventListener('click', () => {
     const item = hu.item;
     closeHeadsUp();
+    // the gentlest other video in the category, nearest in rank
     const calm = app.items(item.cat)
-      .filter(it => it.comfort === 1)
-      .sort((a, b) => Math.abs(a.rank - item.rank) - Math.abs(b.rank - item.rank))[0];
+      .filter(it => it !== item && !it.missing && it.comfort && it.comfort < item.comfort)
+      .sort((a, b) => a.comfort - b.comfort || Math.abs(a.rank - item.rank) - Math.abs(b.rank - item.rank))[0];
     if (!calm) return;
     if (app.mode === 'player') app.exitPlayer();
     closePreview();

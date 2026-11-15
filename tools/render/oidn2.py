@@ -25,6 +25,7 @@ def _load():
     L.oidnSetSharedFilterImage.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_void_p, ctypes.c_int,
                                            ctypes.c_size_t, ctypes.c_size_t, ctypes.c_size_t, ctypes.c_size_t, ctypes.c_size_t]
     L.oidnSetFilterBool.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_bool]
+    L.oidnSetFilterInt.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_int]
     L.oidnCommitFilter.argtypes = [ctypes.c_void_p]
     L.oidnExecuteFilter.argtypes = [ctypes.c_void_p]
     L.oidnReleaseFilter.argtypes = [ctypes.c_void_p]
@@ -54,6 +55,7 @@ def denoise(color, albedo=None, normal=None, hdr=True, clean_aux=False):
     if normal is not None: img(b'normal', normal)
     L.oidnSetSharedFilterImage(flt, b'output', out.ctypes.data_as(ctypes.c_void_p), FLOAT3, w, h, 0, 0, 0)
     L.oidnSetFilterBool(flt, b'hdr', bool(hdr))
+    L.oidnSetFilterInt(flt, b'maxMemoryMB', 5000)        # large renders are denoised in tiles rather than running out of memory
     if clean_aux: L.oidnSetFilterBool(flt, b'cleanAux', True)
     L.oidnCommitFilter(flt)
     L.oidnExecuteFilter(flt)

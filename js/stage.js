@@ -200,7 +200,7 @@ export class Stage {
     // the white dot of the sign: its glow on the wall is in the picture; the lamp itself is drawn here, bright
     const em = info.layout.emblem;
     if (em) {
-      this.dotMat = new THREE.MeshBasicMaterial({ color: 0x000000, depthTest: false, depthWrite: false });
+      this.dotMat = new THREE.MeshBasicMaterial({ color: 0x000000, depthTest: false, depthWrite: false, transparent: true, blending: THREE.AdditiveBlending });
       const dot = new THREE.Mesh(new THREE.SphereGeometry(em.dot * 0.96, 32, 16), this.dotMat);
       dot.position.set(...em.center);
       dot.renderOrder = 2;
