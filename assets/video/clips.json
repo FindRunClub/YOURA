@@ -1,0 +1,107 @@
+{
+ "musician-1": {
+  "w": 1600,
+  "h": 800,
+  "dur": 6.0,
+  "projection": "equirect",
+  "standin": true
+ },
+ "musician-2": {
+  "w": 1600,
+  "h": 800,
+  "dur": 6.0,
+  "projection": "equirect",
+  "standin": true
+ },
+ "musician-3": {
+  "w": 1600,
+  "h": 800,
+  "dur": 6.0,
+  "projection": "equirect",
+  "standin": true
+ },
+ "musician-4": {
+  "w": 1600,
+  "h": 800,
+  "dur": 6.0,
+  "projection": "equirect",
+  "standin": true
+ },
+ "musician-5": {
+  "w": 1600,
+  "h": 800,
+  "dur": 6.0,
+  "projection": "equirect",
+  "standin": true
+ },
+ "athlete-1": {
+  "w": 1600,
+  "h": 800,
+  "dur": 6.0,
+  "projection": "equirect",
+  "standin": true
+ },
+ "athlete-2": {
+  "w": 1600,
+  "h": 800,
+  "dur": 6.0,
+  "projection": "equirect",
+  "standin": true
+ },
+ "athlete-3": {
+  "w": 1600,
+  "h": 800,
+  "dur": 6.0,
+  "projection": "equirect",
+  "standin": true
+ },
+ "athlete-4": {
+  "w": 1600,
+  "h": 800,
+  "dur": 6.0,
+  "projection": "equirect",
+  "standin": true
+ },
+ "athlete-5": {
+  "w": 1600,
+  "h": 800,
+  "dur": 6.0,
+  "projection": "equirect",
+  "standin": true
+ },
+ "character-1": {
+  "w": 1600,
+  "h": 800,
+  "dur": 6.0,
+  "projection": "equirect",
+  "standin": true
+ },
+ "character-2": {
+  "w": 1600,
+  "h": 800,
+  "dur": 6.0,
+  "projection": "equirect",
+  "standin": true
+ },
+ "character-3": {
+  "w": 1600,
+  "h": 800,
+  "dur": 6.0,
+  "projection": "equirect",
+  "standin": true
+ },
+ "character-4": {
+  "w": 1600,
+  "h": 800,
+  "dur": 6.0,
+  "projection": "equirect",
+  "standin": true
+ },
+ "character-5": {
+  "w": 1600,
+  "h": 800,
+  "dur": 6.0,
+  "projection": "equirect",
+  "standin": true
+ }
+}

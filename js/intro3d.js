@@ -22,7 +22,7 @@ export class Intro {
     scene.background = null;
     const pm = new THREE.PMREMGenerator(renderer);
     scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture;
-    scene.environmentIntensity = 0.42;
+    scene.environmentIntensity = 0.5;
     pm.dispose();
 
     const logo = this.logo = new THREE.Group();
@@ -39,7 +39,7 @@ export class Intro {
     // the three red arcs, trimmed by the big circle exactly as in the logo
     const vx = DOT[0] - EARTH[0], vy = DOT[1] - EARTH[1], vl = Math.hypot(vx, vy), phi = Math.atan2(vy, vx);
     const half = r => Math.acos(clamp((EARTH[2] * EARTH[2] - vl * vl - r * r) / (2 * r * vl), -1, 1));
-    const glow = new THREE.MeshStandardMaterial({ color: 0x18020a, emissive: RED, emissiveIntensity: 2.6, roughness: 0.35 });
+    const glow = new THREE.MeshStandardMaterial({ color: 0x050001, emissive: RED, emissiveIntensity: 2.6, roughness: 0.6, envMapIntensity: 0.15 });
     for (let k = 0; k < 3; k++) {
       const r0 = BANDS[k * 2], r1 = BANDS[k * 2 + 1];
       const h0 = half(r0), h1 = half(r1);
@@ -69,11 +69,12 @@ export class Intro {
     scene.add(mirror);
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.ShaderMaterial({
       transparent: true, depthWrite: false,
-      uniforms: { uC: { value: new THREE.Vector3(0, floorY, -D0) } },
+      uniforms: { uC: { value: new THREE.Vector3(0, floorY, -D0) }, uShow: { value: 1 } },
       vertexShader: /* glsl */`varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
-      fragmentShader: /* glsl */`precision highp float; uniform vec3 uC; varying vec3 vW;
-        void main(){ float d = length(vW.xz - uC.xz); gl_FragColor = vec4(vec3(0.004, 0.004, 0.005), mix(0.8, 1.0, smoothstep(2.0, 14.0, d))); }`
+      fragmentShader: /* glsl */`precision highp float; uniform vec3 uC; uniform float uShow; varying vec3 vW;
+        void main(){ float d = length(vW.xz - uC.xz); gl_FragColor = vec4(vec3(0.004, 0.004, 0.005), 1.0 - 0.13 * uShow * (1.0 - smoothstep(2.0, 14.0, d))); }`
     }));
+    this.floorU = floor.material.uniforms;
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = floorY;
     floor.renderOrder = 2;
@@ -85,7 +86,7 @@ export class Intro {
     this.whiteLight = new THREE.PointLight(0xffffff, 14, 12, 2);
     this.whiteLight.position.set(DOT[0] * S, DOT[1] * S, -D0 + 0.5);
     scene.add(this.whiteLight);
-    const key = new THREE.DirectionalLight(0xdfe8ff, 1.3);
+    const key = new THREE.DirectionalLight(0xdfe8ff, 1.7);
     key.position.set(-4, 6, 5);
     scene.add(key);
 
@@ -108,23 +109,21 @@ export class Intro {
     this.words = [];
     const dir = this.center.clone().normalize();
     const side = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
-    [['MUSICIAN', 0.40, -1], ['ATHLETE', 0.60, 1], ['CHARACTER', 0.78, -1]].forEach(([text, at, s], k) => {
-      const g = new TextGeometry(text, { font, size: 0.34, depth: 0.09, curveSegments: 6, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.008, bevelSegments: 2 });
+    const up = new THREE.Vector3().crossVectors(side, dir).normalize();
+    [['MUSICIAN', 0.46, -1], ['ATHLETE', 0.64, 1], ['CHARACTER', 0.80, -1]].forEach(([text, at, s]) => {
+      const g = new TextGeometry(text, { font, size: 0.2, depth: 0.05, curveSegments: 6, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.005, bevelSegments: 2 });
       g.computeBoundingBox();
-      g.translate(-(g.boundingBox.max.x + g.boundingBox.min.x) / 2, -0.17, -0.045);
+      g.translate(-(g.boundingBox.max.x + g.boundingBox.min.x) / 2, -0.1, -0.025);
       const m = new THREE.Mesh(g, mat.clone());
       const dist = this.L0 * (1 - at);                         // how far from the dot along the path
-      m.position.copy(this.center).addScaledVector(dir, -dist).addScaledVector(side, s * 0.62).add(new THREE.Vector3(0, s * 0.18 - 0.16, 0));
-      m.quaternion.copy(this.aimFor(m.position));
-      m.rotateY(s * -0.5);
+      m.position.copy(this.center).addScaledVector(dir, -dist).addScaledVector(side, s * 0.1).addScaledVector(up, s * 0.46);
+      m.quaternion.copy(this.aim);
+      m.rotateY(s * -0.16);
+      m.rotateX(s * 0.12);
       m.userData.at = dist;
       this.scene.add(m);
       this.words.push(m);
     });
-  }
-
-  aimFor(p) {
-    return new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(new THREE.Vector3(), this.center, new THREE.Vector3(0, 1, 0)));
   }
 
   // Thin streaks of light along the way, which stretch as the camera speeds up.
@@ -168,22 +167,23 @@ export class Intro {
     const turn = smoothstep(0.04, 0.6, u);
     this.q.identity().slerp(this.aim, turn);
     camera.quaternion.copy(this.q).multiply(userQ);
-    const prev = this._dist == null ? dist : this._dist;
-    this.speed = Math.max(0, prev - dist);
-    this._dist = dist;
+    const step = this._t == null ? 0 : t - this._t;
+    if (step > 1e-4) this.speed = Math.max(0, (this._dist - dist) / step);
+    else if (this._t == null) this.speed = 0;
+    this._dist = dist; this._t = t;
     // words fade in as they come near, and out as the camera passes
     const along = this.L0 - dist;                                         // how far the camera has travelled
     for (const w of this.words) {
       const ahead = (this.L0 - w.userData.at) - along;                     // distance still to go to reach the word
-      w.material.opacity = smoothstep(7.0, 3.0, ahead) * smoothstep(-0.2, 0.5, ahead);
+      w.material.opacity = smoothstep(3.4, 2.0, ahead) * smoothstep(0.12, 0.7, ahead);
       w.visible = w.material.opacity > 0.01;
     }
     // streaks
-    const sp = clamp(this.speed * 60, 0, 40);
-    this.sMat.opacity = reduced ? 0 : smoothstep(0.6, 6.0, sp) * 0.75;
+    const sp = clamp(this.speed, 0, 12);
+    this.sMat.opacity = reduced ? 0 : smoothstep(0.3, 2.6, sp) * 0.8;
     if (this.sMat.opacity > 0.01) {
       const p = this.streaks.geometry.attributes.position.array;
-      const len = 0.05 + sp * 0.05, span = 14;
+      const len = 0.05 + sp * 0.12, span = 14;
       for (let i = 0; i < this.sN; i++) {
         const z = ((this.sBase[i * 3 + 2] * span - along) % span + span) % span - 2;      // metres ahead of the camera
         const bx = this.sBase[i * 3], by = this.sBase[i * 3 + 1];
@@ -197,11 +197,13 @@ export class Intro {
     }
     this.streaks.visible = this.sMat.opacity > 0.01;
     // the sign breathes a little, and the dot swells as you close in
-    this.glow.emissiveIntensity = 2.4 + 0.25 * Math.sin(t * 2.1);
     const near = smoothstep(this.dotR * 30, this.dotR * 2, dist);
+    const close = smoothstep(5.0, 1.2, dist);
+    this.glow.emissiveIntensity = (1.6 + 0.12 * Math.sin(t * 2.1)) * (1 - 0.4 * close);     // deeper red as the arcs fill the view
+    this.floorU.uShow.value = 1 - smoothstep(4.5, 2.0, dist);
     this.dotMat.color.setScalar(7 + 30 * near);
     return smoothstep(this.dotR * 1.6, this.dotR * 0.85, dist);
   }
 
-  reset() { this._dist = null; }
+  reset() { this._dist = null; this._t = null; this.speed = 0; }
 }

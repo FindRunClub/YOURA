@@ -2,7 +2,7 @@
   "name": "youra",
   "private": true,
   "version": "3.0.0",
-  "description": "YOURA: curated 360° video you look around by moving your phone.",
+  "description": "YOURA: curated video you look around by moving your phone, in a film studio you can stand in.",
   "scripts": {
     "build": "esbuild js/main.js --bundle --format=iife --target=es2020,safari15 --minify --legal-comments=none --outfile=app.js",
     "watch": "esbuild js/main.js --bundle --format=iife --target=es2020,safari15 --sourcemap --outfile=app.js --watch",

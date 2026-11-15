@@ -85,7 +85,8 @@ void main(){
   // a faint LED scan texture so it reads as a wall of light, not a flat picture
   v *= 0.96 + 0.04 * sin(uv.y * 360.0 * 3.14159);
   float m = texture2D(tMatte, uMatteRect.xy + uv * uMatteRect.zw).r;
-  gl_FragColor = vec4(v * uGain * m * step(0.001, uOn), 1.0);
+  float lit = m * step(0.001, uOn);
+  gl_FragColor = vec4(v * uGain * lit, 0.7 * lit * smoothstep(0.3, 1.0, uOn));
 }`;
 
 // Looks for each category: the colour of the cyclorama (left and right) and of the film lights.
@@ -96,7 +97,7 @@ export const MOODS = {
   yours: { wallA: [0.55, 0.55, 0.6], wallB: [0.3, 0.34, 0.45], beam: [1.0, 0.95, 0.9] }
 };
 // How bright each set of lights is in the finished look (1 = as rendered).
-const LEVEL = { base: 0.5, neon: 0.34, dot: 0.34, beam: 0.085, wall: 0.085, scr: 0.5 };
+const LEVEL = { base: 0.34, neon: 0.46, dot: 5.0, beam: 0.065, wall: 0.056, scr: 0.5 };
 
 function loadCube(name, faces, srgb) {
   return new Promise((resolve, reject) => {
@@ -155,7 +156,7 @@ export class Stage {
       tBase: { value: base }, tA: { value: a }, tB: { value: b }, tC: { value: c },
       cBase: { value: new THREE.Vector3() }, cNeon: { value: new THREE.Vector3() }, cBeam: { value: new THREE.Vector3() },
       cWallA: { value: new THREE.Vector3() }, cWallB: { value: new THREE.Vector3() }, cDot: { value: new THREE.Vector3() },
-      cScr: { value: [0, 1, 2, 3, 4].map(() => new THREE.Vector3()) }, uWallOn: { value: 0 }, uHot: { value: 5 }
+      cScr: { value: [0, 1, 2, 3, 4].map(() => new THREE.Vector3()) }, uWallOn: { value: 0 }, uHot: { value: 1.6 }
     };
     const sky = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.ShaderMaterial({
       vertexShader: SKY_VERT, fragmentShader: SKY_FRAG, uniforms: U, side: THREE.BackSide, depthTest: false, depthWrite: false
@@ -179,7 +180,7 @@ export class Stage {
       const rect = new THREE.Vector4(col / COLS, 1 - (row + 1) / ROWS, 1 / COLS, 1 / ROWS);
       const mat = new THREE.ShaderMaterial({
         vertexShader: SCREEN_VERT, fragmentShader: SCREEN_FRAG, depthTest: false, depthWrite: false, transparent: true,
-        blending: THREE.CustomBlending, blendEquation: THREE.AddEquation, blendSrc: THREE.OneFactor, blendDst: THREE.OneFactor,
+        blending: THREE.CustomBlending, blendEquation: THREE.AddEquation, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor,
         uniforms: {
           tVideo: { value: black }, tNext: { value: black }, tOver: { value: this.overTex }, tMatte: { value: matte || white },
           uRect: { value: rect.clone() }, uRectNext: { value: rect.clone() }, uOverRect: { value: rect.clone() },
@@ -224,8 +225,8 @@ export class Stage {
           p.z += cos(uTime * 0.09 + aSeed * 23.0) * 0.25;
           vec4 mv = modelViewMatrix * vec4(p, 1.0);
           gl_Position = projectionMatrix * mv;
-          gl_PointSize = uScale * (1.2 + aSeed * 2.2) / max(-mv.z, 0.4);
-          vA = (0.35 + 0.65 * sin(uTime * 0.6 + aSeed * 90.0)) * smoothstep(0.5, 1.6, -mv.z);
+          gl_PointSize = max(1.0, uScale * (0.8 + aSeed * 1.6) / max(-mv.z, 0.5));
+          vA = (0.3 + 0.7 * sin(uTime * 0.6 + aSeed * 90.0)) * smoothstep(0.7, 2.0, -mv.z);
         }`,
       fragmentShader: /* glsl */`
         precision highp float; uniform float uLevel; varying float vA;
@@ -388,10 +389,10 @@ export class Stage {
       U.cScr.value[i].set(c.r * w, c.g * w, c.b * w);
     }
     this.dustU.uTime.value = this.time;
-    this.dustU.uLevel.value = 0.5 * on.beam * dim + 0.12 * on.base;
+    this.dustU.uLevel.value = 0.22 * on.beam * dim + 0.05 * on.base;
   }
 
-  setPixelScale(ph) { if (this.dustU) this.dustU.uScale.value = ph * 0.006; }
+  setPixelScale(ph) { if (this.dustU) this.dustU.uScale.value = ph * 0.0032; }
 
   // Read each screen's average colour a few times a second, so its glow on the floor follows the picture.
   _probeScreens(dt) {

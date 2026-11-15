@@ -1,7 +1,7 @@
 {
   "name": "YOURA",
   "short_name": "YOURA",
-  "description": "Curated 360° video you look around by moving your phone.",
+  "description": "Curated video you look around by moving your phone, in a film studio you can stand in.",
   "start_url": "./",
   "scope": "./",
   "display": "fullscreen",

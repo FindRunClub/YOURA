@@ -1,0 +1,40 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>YOURA stand-in clip renderer</title>
+<canvas id="c" width="1600" height="800"></canvas>
+<script type="module">
+// Draws one 360-degree (equirectangular) frame of a stand-in scene. Driven by render.cjs.
+import { SCENE_LIB } from './scenes.js';
+const canvas = document.getElementById('c');
+const gl = canvas.getContext('webgl', { preserveDrawingBuffer: true, antialias: false });
+gl.getExtension('OES_standard_derivatives');
+const vs = `attribute vec2 p; void main(){ gl_Position = vec4(p, 0.0, 1.0); }`;
+const fs = `#extension GL_OES_standard_derivatives : enable
+precision highp float;
+uniform vec2 uRes; uniform float uKind, uTime, uSeed; uniform vec3 uC1, uC2, uC3;
+${SCENE_LIB}
+void main(){
+  vec2 uv = gl_FragCoord.xy / uRes;
+  float lon = (uv.x - 0.5) * 6.28318530718, lat = (uv.y - 0.5) * 3.14159265359;
+  vec3 d = vec3(sin(lon) * cos(lat), sin(lat), -cos(lon) * cos(lat));
+  gl_FragColor = vec4(scene(uKind, d, uTime, uC1, uC2, uC3, uSeed), 1.0);
+}`;
+function sh(type, src) { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; }
+const prog = gl.createProgram();
+gl.attachShader(prog, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, fs));
+gl.bindAttribLocation(prog, 0, 'p'); gl.linkProgram(prog); gl.useProgram(prog);
+const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+const U = n => gl.getUniformLocation(prog, n);
+const hex = h => { const n = parseInt(h.slice(1), 16); return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255]; };
+window.renderFrame = (r, t, seed) => {
+  gl.viewport(0, 0, canvas.width, canvas.height);
+  gl.uniform2f(U('uRes'), canvas.width, canvas.height);
+  gl.uniform1f(U('uKind'), r.kind); gl.uniform1f(U('uTime'), t * r.speed + seed * 7); gl.uniform1f(U('uSeed'), seed);
+  gl.uniform3fv(U('uC1'), hex(r.c[0])); gl.uniform3fv(U('uC2'), hex(r.c[1])); gl.uniform3fv(U('uC3'), hex(r.c[2]));
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+  return canvas.toDataURL('image/jpeg', 0.93).split(',')[1];
+};
+window.ready = true;
+</script>

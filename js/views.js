@@ -1,8 +1,13 @@
 // Sheets, cards and panels that sit over the 360 view: preview, comfort heads-up, first-run,
 // Up next, List and Saved, and Settings.
 import { h, icon, setIcon, mark, comfortBars, confirmDialog, fmtTime } from './ui.js';
-import { COMFORT } from './catalog.js';
-import { posterSoon, posters } from './posters.js';
+import { COMFORT, ALL } from './catalog.js';
+
+// A still for a video: the clip's own poster file, or the frame grabbed when you added it.
+function setPoster(img, item) {
+  img.onerror = () => img.removeAttribute('src');
+  if (item && item.poster) img.src = item.poster; else img.removeAttribute('src');
+}
 
 export function createViews(app) {
   const root = document.getElementById('app');
@@ -29,11 +34,17 @@ export function createViews(app) {
       if (f) { try { f.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
     });
   }
-  function show(el) { el.hidden = false; requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('open'))); }
+  // Opening and closing can overlap (a quick second tap), so each element remembers which one was asked for last.
+  function show(el) {
+    el._open = true;
+    el.hidden = false;
+    requestAnimationFrame(() => requestAnimationFrame(() => { if (el._open) el.classList.add('open'); }));
+  }
   function hide(el) {
+    el._open = false;
     el.classList.remove('open');
     clearTimeout(el._t);
-    el._t = setTimeout(() => { if (!el.classList.contains('open')) el.hidden = true; }, 340);
+    el._t = setTimeout(() => { if (!el._open) el.hidden = true; }, 340);
   }
 
   const two = n => String(n).padStart(2, '0');
@@ -45,10 +56,11 @@ export function createViews(app) {
     if (item.dur) wrap.append(h('span', { class: 'mono' }, fmtTime(item.dur)));
     if (item.comfort) wrap.append(h('span', { class: 'comfort' }, comfortBars(item.comfort), COMFORT[item.comfort].name));
     else wrap.append(h('span', null, 'Not rated'));
-    if (item.threeD) wrap.append(h('span', { class: 'tag' }, '3D'));
+    if (item.stereo) wrap.append(h('span', { class: 'tag' }, '3D'));
     if (item.isNew && !store.isWatched(item.id)) wrap.append(h('span', { class: 'tag red' }, 'NEW'));
     if (store.isWatched(item.id)) wrap.append(h('span', { class: 'watched' }, icon('check', 16), 'Watched'));
-    if (long && item.demo) wrap.append(h('span', { class: 'tag ghost' }, 'Demo scene'));
+    if (long && item.standin) wrap.append(h('span', { class: 'tag ghost' }, 'Stand-in scene'));
+    if (long && item.missing) wrap.append(h('span', { class: 'tag ghost' }, 'Coming soon'));
     return wrap;
   }
 
@@ -122,14 +134,15 @@ export function createViews(app) {
   function openPreview(item) {
     if (!item) return;
     pv.item = item;
-    pv.img.removeAttribute('src');
-    posterSoon(item, url => { if (pv.item === item && url) pv.img.src = url; });
+    setPoster(pv.img, item);
+    pv.watch.querySelector('span:last-child').textContent = item.projection === 'flat' ? 'Watch on the big screen' : 'Watch in 360°';
     pv.rank.textContent = two(item.rank);
     pv.title.textContent = item.title;
     pv.by.textContent = `${item.creator} · ${catLabel(item)}`;
     pv.facts.replaceChildren(facts(item, { long: true }));
     pv.why.replaceChildren(h('span', { class: 'label' }, item.local ? 'Your video' : 'Why it’s here'), item.why);
     pv.comfort.textContent = item.comfort ? `${COMFORT[item.comfort].name}: ${COMFORT[item.comfort].blurb}` : 'Not rated for comfort. Videos you add aren’t rated.';
+    pv.watch.disabled = !!item.missing;
     pv.share.hidden = !!item.local || app.embedded;   // a link to a local file, or to an embedded preview, goes nowhere
     syncSave();
     if (!isOpen('preview')) {
@@ -256,7 +269,7 @@ export function createViews(app) {
   un.m = h('div', { class: 'm' });
   un.next = h('button', { class: 'un-next' }, un.img, h('div', null, un.t, un.m));
   un.play = h('button', { class: 'btn primary', 'data-autofocus': '' }, icon('play', 18), h('span', null, 'Play now'));
-  un.back = h('button', { class: 'btn ghost' }, 'Back to the sphere');
+  un.back = h('button', { class: 'btn ghost' }, 'Back to the studio');
   un.q = h('div', { class: 'react-q' });
   un.love = h('button', { class: 'chip-btn' }, icon('heart', 18), h('span', null, 'Loved it'));
   un.meh = h('button', { class: 'chip-btn' }, icon('meh', 18), h('span', null, 'Not for me'));
@@ -310,13 +323,12 @@ export function createViews(app) {
     un.dots.replaceChildren(...list.map(it => h('i', { class: (store.isWatched(it.id) ? 'w ' : '') + (it === item ? 'cur' : '') })));
     if (next) {
       un.next.hidden = false; un.play.hidden = false; un.done.hidden = true;
-      un.img.removeAttribute('src');
-      posterSoon(next, url => { if (un.nextItem === next && url) un.img.src = url; });
+      setPoster(un.img, next);
       un.t.textContent = next.title;
       un.m.textContent = `${two(next.rank)} · ${fmtTime(next.dur)}${next.comfort ? ' · ' + COMFORT[next.comfort].name : ''}`;
     } else {
       un.next.hidden = true; un.play.hidden = true; un.done.hidden = false;
-      un.done.textContent = `That’s every video in ${catLabel(item)}. Try another category from the sphere.`;
+      un.done.textContent = `That’s every video in ${catLabel(item)}. Try another category back in the studio.`;
     }
     show(un.wrap);
     if (!isOpen('upnext')) push('upnext', un.wrap, hideUpNext);
@@ -343,7 +355,7 @@ export function createViews(app) {
 
   /* --------------------------------------------------------------- list and saved */
 
-  const ls = { mode: 'list', cat: null, cancel: null };
+  const ls = { mode: 'list', cat: null };
   ls.title = h('h2', { id: 'ls-title' });
   ls.sub = h('p', { class: 'muted small' });
   ls.tabs = h('div', { class: 'tabs', role: 'tablist', 'aria-label': 'Categories' });
@@ -364,7 +376,7 @@ export function createViews(app) {
     const meta = h('span', { class: 'm' },
       h('span', { class: 'mono' }, fmtTime(item.dur)),
       item.comfort ? h('span', { class: 'comfort' }, comfortBars(item.comfort), COMFORT[item.comfort].name) : h('span', null, 'Not rated'),
-      item.threeD ? h('span', { class: 'tag' }, '3D') : null,
+      item.stereo ? h('span', { class: 'tag' }, '3D') : null,
       item.isNew && !store.isWatched(item.id) ? h('span', { class: 'tag red' }, 'NEW') : null,
       store.isWatched(item.id) ? h('span', { class: 'watched' }, icon('check', 14), 'Watched') : null,
       ls.mode === 'saved' ? h('span', { class: 'cat' }, catLabel(item)) : null);
@@ -387,16 +399,14 @@ export function createViews(app) {
       app.faceItem(item);
       setTimeout(() => openPreview(item), app.reduced ? 0 : 380);
     });
-    const li = h('li', { class: store.isWatched(item.id) ? 'is-watched' : '' }, main, saveBtn);
-    li._img = img;
-    return li;
+    setPoster(img, item);
+    return h('li', { class: store.isWatched(item.id) ? 'is-watched' : '' }, main, saveBtn);
   }
 
   function renderList() {
-    if (ls.cancel) ls.cancel();
     const saved = ls.mode === 'saved';
     ls.title.textContent = saved ? 'Saved' : 'List';
-    ls.sub.textContent = saved ? 'Everything you’ve saved, newest first.' : 'The same picks as the sphere, in rank order. No looking around needed.';
+    ls.sub.textContent = saved ? 'Everything you’ve saved, newest first.' : 'The same picks as the studio screens, in rank order. No looking around needed.';
     ls.tabs.hidden = saved;
     if (!saved) {
       ls.tabs.replaceChildren(...app.cats().map(c => {
@@ -406,13 +416,11 @@ export function createViews(app) {
       }));
     }
     const list = saved ? store.d.saved.map(id => app.findItem(id)).filter(Boolean) : app.items(ls.cat);
-    const rows = list.map(row);
-    ls.rows.replaceChildren(...rows);
+    ls.rows.replaceChildren(...list.map(row));
     ls.empty.hidden = list.length > 0;
     ls.empty.replaceChildren(saved
-      ? h('p', null, 'Nothing saved yet. Long-press a tile on the sphere, or tap Save in a preview.')
+      ? h('p', null, 'Nothing saved yet. Long-press a screen in the studio, or tap Save in a preview.')
       : h('p', null, 'No videos here yet.'));
-    ls.cancel = posters(list, (it, url) => { const r = rows[list.indexOf(it)]; if (r) r._img.src = url; });
   }
 
   function openList(mode = 'list') {
@@ -510,7 +518,7 @@ export function createViews(app) {
         sw('vignette', 'Vignette when spinning fast', 'Darkens the edges during fast drag turns.')),
       group('Comfort',
         sw('headsUp', 'Heads-up before Intense videos', 'One clear choice before fast motion. It never blocks the video.'),
-        sw('hideIntense', 'Hide Intense videos from the sphere', 'They stay in the list.', () => app.applySettings()),
+        sw('hideIntense', 'Hide Intense videos from the studio screens', 'They stay in the list.', () => app.applySettings()),
         sw('breaks', 'Break reminder', 'A gentle nudge after 20 minutes of looking around.')),
       group('Intro',
         seg('Each launch', [['full', 'Full'], ['short', 'Short'], ['off', 'Off']], () => store.s.intro, v => store.set('intro', v), 'The first launch always plays it in full.'),
@@ -519,12 +527,14 @@ export function createViews(app) {
         sw('autoplay', 'Play the next video automatically', 'Up next counts down from 5. Never into an Intense video without the heads-up.')),
       group('Your videos',
         h('div', { class: 'set-row col' },
-          h('div', { class: 'set-desc' }, 'Add a 360° video from this device to watch it in YOURA’s player, with motion. Use an equirectangular MP4: 2:1, or 1:1 for 3D over-under. It stays on this device.'),
-          h('label', { class: 'btn', for: 'add-video' }, icon('plus', 18), h('span', null, 'Add a 360° video')), file),
+          h('div', { class: 'set-desc' }, 'Add a video from this device to watch it in YOURA’s player, with motion. A 2:1 MP4 plays as 360°, 1:1 as 3D over-under, and any other shape plays on the giant curved screen. It stays on this device.'),
+          h('label', { class: 'btn', for: 'add-video' }, icon('plus', 18), h('span', null, 'Add a video')), file),
         ...yours),
       group('About',
         h('div', { class: 'set-row col' },
-          h('p', { class: 'set-desc' }, 'This build plays 30 demo scenes drawn live in code. They stand in for the licensed 360° videos YOURA will stream, and labels like 3D show how real videos will be marked.'),
+          h('p', { class: 'set-desc' }, ALL.some(it => it.standin)
+            ? 'The studio is a path-traced 3D scene, lit live. The videos on its screens are stand-in scenes for now; real clips take their place as they are added.'
+            : 'The studio is a path-traced 3D scene, lit live.'),
           h('p', { class: 'set-desc' }, 'For motion tracking on iPhone, open YOURA in Safari from its own web address and allow Motion & Orientation when asked. Add it to your Home Screen to open it full screen.')),
         h('div', { class: 'set-row' }, reset))
     );
@@ -539,7 +549,7 @@ export function createViews(app) {
 
   function closePanel(name) {
     if (!isOpen(name)) return;
-    if (name === 'list') { if (ls.cancel) ls.cancel(); hide(ls.wrap); }
+    if (name === 'list') hide(ls.wrap);
     if (name === 'settings') hide(st.wrap);
     pop(name);
   }

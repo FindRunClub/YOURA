@@ -1,0 +1,17 @@
+{
+  "musician-1": { "kind": 3, "c": ["#4A0F24", "#E11737", "#3DB8FF"], "speed": 1.0 },
+  "musician-2": { "kind": 3, "c": ["#3A2208", "#FFB13D", "#FF4D67"], "speed": 0.8 },
+  "musician-3": { "kind": 1, "c": ["#1A0B3D", "#FF2E88", "#FF8A3D"], "speed": 1.0 },
+  "musician-4": { "kind": 3, "c": ["#1C0F3A", "#A64DFF", "#3DFFB0"], "speed": 1.15 },
+  "musician-5": { "kind": 6, "c": ["#4E7FCC", "#E39A55", "#FFE0A3"], "speed": 0.7 },
+  "athlete-1": { "kind": 7, "c": ["#1C2E5C", "#3DB8FF", "#F5F5F5"], "speed": 1.0 },
+  "athlete-2": { "kind": 2, "c": ["#2E6EB5", "#9FD3F0", "#FFF2C2"], "speed": 1.6 },
+  "athlete-3": { "kind": 8, "c": ["#3F7FD9", "#E6F0FA", "#6B8F5A"], "speed": 0.5 },
+  "athlete-4": { "kind": 7, "c": ["#0B1430", "#FFD23F", "#2E7BFF"], "speed": 1.0 },
+  "athlete-5": { "kind": 8, "c": ["#3A7BD5", "#E2EEF9", "#5B7F4A"], "speed": 1.5 },
+  "character-1": { "kind": 2, "c": ["#1C2A52", "#FF8A5C", "#FFD08A"], "speed": 0.6 },
+  "character-2": { "kind": 1, "c": ["#140A2E", "#FF4FD8", "#49F2FF"], "speed": 1.1 },
+  "character-3": { "kind": 0, "c": ["#0F2A45", "#38F2A0", "#7A5CFF"], "speed": 0.7 },
+  "character-4": { "kind": 5, "c": ["#2B0B12", "#D94C64", "#E11737"], "speed": 0.5 },
+  "character-5": { "kind": 9, "c": ["#0A0A14", "#5D6BFF", "#E8C27A"], "speed": 0.5 }
+}

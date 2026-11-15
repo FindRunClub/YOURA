@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>YOURA</title>
-<meta name="description" content="Curated 360° video you look around by moving your phone.">
+<meta name="description" content="Curated video you look around by moving your phone, in a film studio you can stand in.">
 <meta name="theme-color" content="#0B0809">
 <meta name="color-scheme" content="dark">
 <meta name="mobile-web-app-capable" content="yes">
@@ -18,11 +18,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Jost:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="css/app.css">
-<link rel="modulepreload" href="js/main.js">
+<link rel="preload" href="assets/studio/studio.json" as="fetch" crossorigin>
 </head>
 <body>
 <div id="app"></div>
-<noscript><p style="padding:24px;color:#fff;font-family:system-ui">YOURA needs JavaScript to draw its 360° view.</p></noscript>
-<script type="module" src="js/main.js"></script>
+<noscript><p style="padding:24px;color:#fff;font-family:system-ui">YOURA needs JavaScript to draw its 3D view.</p></noscript>
+<script src="app.js" defer></script>
 </body>
 </html>
