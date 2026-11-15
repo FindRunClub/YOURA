@@ -39,7 +39,7 @@ void main(){
   // the wash comes up from the middle of the cyclorama outward, in two colours left and right
   float lit = 1.0 - smoothstep(uWallOn * 2.0 - 0.35, uWallOn * 2.0, abs(az));
   col += dec(vec3(a.b)) * mix(cWallA, cWallB, smoothstep(-1.1, 1.1, az)) * lit;
-  col += dec(vec3(b.r)) * cDot * hot(b.r);
+  col += dec(vec3(b.r)) * cDot;
   col += dec(vec3(b.g)) * cScr[0] + dec(vec3(b.b)) * cScr[1];
   col += dec(vec3(c.r)) * cScr[2] + dec(vec3(c.g)) * cScr[3] + dec(vec3(c.b)) * cScr[4];
   gl_FragColor = vec4(col, 1.0);
@@ -97,7 +97,7 @@ export const MOODS = {
   yours: { wallA: [0.55, 0.55, 0.6], wallB: [0.3, 0.34, 0.45], beam: [1.0, 0.95, 0.9] }
 };
 // How bright each set of lights is in the finished look (1 = as rendered).
-const LEVEL = { base: 0.34, neon: 0.46, dot: 5.0, beam: 0.065, wall: 0.056, scr: 0.5 };
+const LEVEL = { base: 0.34, neon: 0.46, dot: 1.3, beam: 0.065, wall: 0.056, scr: 0.5 };
 
 function loadCube(name, faces, srgb) {
   return new Promise((resolve, reject) => {
@@ -197,6 +197,15 @@ export class Stage {
       this.scene.add(mesh);
       this.screens.push({ mesh, mat, c, right, up, n, hw: s.width / 2, hh: s.height / 2, dir: c.clone().normalize() });
     });
+    // the white dot of the sign: its glow on the wall is in the picture; the lamp itself is drawn here, bright
+    const em = info.layout.emblem;
+    if (em) {
+      this.dotMat = new THREE.MeshBasicMaterial({ color: 0x000000, depthTest: false, depthWrite: false });
+      const dot = new THREE.Mesh(new THREE.SphereGeometry(em.dot * 0.96, 32, 16), this.dotMat);
+      dot.position.set(...em.center);
+      dot.renderOrder = 2;
+      this.scene.add(dot);
+    }
     this._dust();
     this.ready = true;
   }
@@ -375,6 +384,7 @@ export class Stage {
     U.cWallA.value.set(this.mood.wallA.r * wall, this.mood.wallA.g * wall, this.mood.wallA.b * wall);
     U.cWallB.value.set(this.mood.wallB.r * wall, this.mood.wallB.g * wall, this.mood.wallB.b * wall);
     U.cDot.value.setScalar(g.dot * LEVEL.dot * on.dot);
+    if (this.dotMat) this.dotMat.color.setScalar(5.5 * on.dot * this.flicker * (0.45 + 0.55 * dim));
     U.uWallOn.value = on.wallSweep * 1.9;
     for (let i = 0; i < 5; i++) {
       const s = this.screens[i], u = s.mat.uniforms;

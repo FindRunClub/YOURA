@@ -71,6 +71,7 @@ export class Theater {
     this.reveal = 0; this.revealTo = 0;
     this.front = 0;
     this.onEnded = null; this.onChange = null;
+    this.wholeFile = null;      // set by the app: url -> promise of an in-memory copy's address
   }
 
   get active() { return this.reveal > 0.001 || this.revealTo > 0; }
@@ -104,8 +105,20 @@ export class Theater {
       this._changed();
     });
     v.addEventListener('error', () => {
-      if (!this.item) return;
-      this.error = 'This video could not be played.'; this.loading = false; this.playing = false; this._changed();
+      const it = this.item;
+      if (!it) return;
+      const fail = () => { this.error = 'This video could not be played.'; this.loading = false; this.playing = false; this._changed(); };
+      if (this._retried || it.local) { fail(); return; }
+      // try the other way of loading it: from its address, or downloaded whole and played from memory
+      this._retried = true;
+      const other = v.getAttribute('src') === it.src ? (this.wholeFile ? this.wholeFile(it.src) : null) : it.src;
+      Promise.resolve(other).then(u => {
+        if (this.item !== it) return;
+        if (!u) { fail(); return; }
+        v.src = u;
+        const p = v.play();
+        if (p && p.catch) p.catch(() => { this.playing = false; this.loading = false; this._changed(); });
+      });
     });
     this.video = v;
     this.tex = new THREE.VideoTexture(v);
@@ -128,7 +141,9 @@ export class Theater {
     const v = this._el();
     this.loading = true;
     this.dur = item.dur || 0;
-    if (v.getAttribute('src') !== item.src) v.src = item.src;
+    const src = item.held || item.src;                  // held: already downloaded whole (see main.js)
+    this._retried = false;
+    if (v.getAttribute('src') !== src) v.src = src;
     try { v.currentTime = 0; } catch (e) { /* not seekable yet */ }
     v.muted = false; v.loop = false;
     this.playing = true;

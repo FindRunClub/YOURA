@@ -98,6 +98,7 @@ function boot() {
   }
   canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); toast('The 3D view was interrupted. Reloading…', 4000); });
   canvas.addEventListener('webglcontextrestored', () => location.reload());
+  theater.wholeFile = wholeFile;
   Object.assign(app, { gfx, stage, theater, intro });
   return true;
 }
@@ -220,28 +221,60 @@ function splash(text) {
 
 /* ------------------------------------------------------------------ screens: previews and lower thirds */
 
+// A phone plays a video straight from its address only if the host can send part of a file. Not every host
+// can, so a clip can also be downloaded whole and played from memory. Inside an embedded preview that way goes first.
+const wholeFiles = new Map();
+function wholeFile(url) {
+  if (!wholeFiles.has(url)) {
+    wholeFiles.set(url, fetch(url).then(r => (r.ok ? r.blob() : null)).then(b => (b && b.size ? URL.createObjectURL(b) : null)).catch(() => null));
+  }
+  return wholeFiles.get(url);
+}
+async function keepClips(cat) {
+  if (!app.embedded) return;
+  for (const it of BY_CAT[cat] || []) {
+    if (it.missing || it.held) continue;
+    const u = await wholeFile(it.src);
+    if (u) it.held = u;
+  }
+}
+
 function previewFor(cat) {
   if (cat === 'yours' || !BY_CAT[cat]) return null;
   if (previews[cat]) return previews[cat];
+  const url = `assets/video/${cat}.mp4`;
   const v = document.createElement('video');
   v.muted = true; v.loop = true; v.playsInline = true;
   v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', ''); v.setAttribute('muted', '');
   v.preload = 'auto'; v.crossOrigin = 'anonymous';
   v.className = 'video-src'; v.setAttribute('aria-hidden', 'true');
   v.addEventListener('playing', () => { if (cat === app.cat) paintScreens(); });
-  v.addEventListener('error', () => { v._dead = true; });
-  v.src = `assets/video/${cat}.mp4`;
+  // two ways to load it: from its address, and from memory; the second is tried if the first fails
+  const ways = app.embedded ? ['whole', 'direct'] : ['direct', 'whole'];
+  const next = () => {
+    const way = ways.shift();
+    if (!way) { v._dead = true; return; }
+    if (way === 'direct') { v.src = url; resume(); return; }
+    wholeFile(url).then(u => { if (u) { v.src = u; resume(); } else next(); });
+  };
+  const resume = () => { v._ready = true; if (cat === app.cat && app.mode === 'home' && !document.hidden) playPreview(cat); };
+  v._next = next;
+  v.addEventListener('error', next);
   document.body.appendChild(v);
   previews[cat] = v;
+  next();
   return v;
 }
 function previewLive(cat) { const v = previews[cat]; return !!v && !v._dead && !v.paused && v.readyState >= 2; }
 function playPreview(cat) {
   for (const [k, o] of Object.entries(previews)) if (k !== cat && !o.paused) o.pause();
   const v = previewFor(cat);
-  if (!v || v._dead) return;
+  if (!v || v._dead || !v._ready) return;
   const p = v.play();
   if (p && p.catch) p.catch(() => { /* autoplay refused (Low Power Mode): posters show until the next tap */ });
+  // still nothing after a few seconds: try the other way of loading it
+  clearTimeout(v._watch);
+  v._watch = setTimeout(() => { if (cat === app.cat && app.mode === 'home' && !v.paused && v.readyState < 2 && v.networkState !== 2) v._next(); }, 5000);
 }
 function pausePreviews() { for (const v of Object.values(previews)) if (!v.paused) v.pause(); }
 function poster(item) {
@@ -444,6 +477,7 @@ function enterHome() {
   stage.setMood(app.cat, true);
   playPreview(app.cat);
   stage.setVideo(previewFor(app.cat), false);
+  keepClips(app.cat);
   paintScreens();
   const quick = app.fastArrive || app.reduced;
   stage.powerOn(quick);
@@ -483,6 +517,7 @@ function setCategory(id, { animate = true } = {}) {
     if (changed) {
       playPreview(id);
       stage.setVideo(previewFor(id), moving);
+      keepClips(id);
     }
     clearTimeout(repaintTimer);
     if (moving) repaintTimer = setTimeout(paintScreens, 280);      // the lower thirds change as the pictures cut over
@@ -625,7 +660,7 @@ function frame(now) {
     camera.fov = intro.fov(aspect);
     camera.updateProjectionMatrix();
     G.white = intro.apply(introT, camera, userQ, app.reduced);
-    G.black = 1 - smoothstep(0, 0.8, introAge);
+    G.black = 1 - smoothstep(0, 0.5, introAge);
     G.exposure = 1.0; G.bloom = 0.85; G.threshold = 0.9; G.vignette = 0.5; G.fringe = 0.006; G.grain = 0.022; G.sat = 1;
     gfx.render([intro.scene], camera, time, true);
     if (G.white >= 0.995 || introT > INTRO_T.IN + 0.4) arrive(false);
