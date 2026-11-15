@@ -93,7 +93,7 @@ npm install
 npm run build
 ```
 
-**Re-rendering the studio** (optional, slow: about half an hour on 4 CPU cores):
+**Re-rendering the studio** (optional, slow: about 45 minutes on 4 CPU cores):
 
 ```bash
 pip install bpy==5.3.0 numpy pillow OpenEXR
@@ -108,8 +108,10 @@ python tools/render/studio.py --res 4096 --matte --out matte.png
 ```
 
 ```bash
-python tools/render/post.py studio.exr --layout layout.json --matte matte.png --out assets/studio --base 2048
+LD_LIBRARY_PATH=$(python -c "import bpy, os; print(os.path.join(os.path.dirname(bpy.__file__), 'lib'))") python tools/render/post.py studio.exr --layout layout.json --matte matte.png --out assets/studio --base 1536
 ```
+
+The last step denoises each set of lights with the Open Image Denoise library that ships inside Blender's Python module, which is why it needs that library path.
 
 ## Toward the App Store
 
