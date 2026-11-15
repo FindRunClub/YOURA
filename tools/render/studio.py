@@ -220,7 +220,7 @@ def build_materials():
     M['white_paint'] = simple('StencilWhite', (0.6, 0.6, 0.58), 0.6)
     M['tape'] = simple('Tape', (0.85, 0.72, 0.05), 0.5)
     M['tape_w'] = simple('TapeWhite', (0.7, 0.7, 0.68), 0.5)
-    M['print'] = emitter('PrintWhite', (0.9, 0.9, 0.88), 0.35)        # lettering on the chairs: faintly self-lit so it stays readable
+    M['print'] = emitter('PrintWhite', (0.9, 0.9, 0.88), 0.6)        # lettering on the chairs: faintly self-lit so it stays readable
     M['lens'] = simple('Lens', (0.01, 0.012, 0.02), 0.04, 0.0, 1.0)
     M['silk'] = simple('Silk', (0.8, 0.8, 0.78), 0.8)
     M['slate'] = simple('Slate', (0.02, 0.02, 0.022), 0.35)
@@ -632,7 +632,7 @@ def build_chairs():
         wood.tube(m @ Vector((-0.27, 0.23, 0.0)), m @ Vector((0.27, 0.23, 0.0)), 0.012, 4)
         cloth.box((0.54, 0.44, 0.012), m @ T((0, 0, 0.765)), 0.004)            # seat
         cloth.box((0.56, 0.012, 0.21), m @ T((0, -0.21, 1.13)), 0.003)         # back
-        text(name, 0.058, m @ T((0, -0.2175, 1.105)) @ Matrix.Rotation(RAD(90), 4, 'X'), M['print'], f'Chair{name}')
+        text(name, 0.072 if len(name) < 9 else 0.064, m @ T((0, -0.2175, 1.1)) @ Matrix.Rotation(RAD(90), 4, 'X'), M['print'], f'Chair{name}')
         layout['chairs'].append({'name': name, 'back': to_app(m @ Vector((0, -0.2175, 1.13)))})
     wood.done('ChairFrames', M['wood'], smooth=False)
     cloth.done('ChairCanvas', M['canvas'], smooth=True)
@@ -757,7 +757,6 @@ def build_dressing(tr):
         floor_cable(cab, [src, src.lerp(distro, 0.5) + Vector((0.4, -0.5, 0)), distro], 0.012)
     floor_cable(cab, [polar(4.7, -106), polar(7.5, -112), polar(9.6, -112)], 0.012)
     for az in (-64, -32, 0, 32, 64):
-        cable(cab, polar(tr - 0.05, az, 4.35), polar(SCREEN_R + 0.2, az + 2, SCREEN_Z + SCREEN_H / 2 + 0.02), 0.25, 0.012)
         cable(cab, polar(SCREEN_R + 0.16, az - 6, SCREEN_Z - SCREEN_H / 2), polar(tr + 0.2, az - 14, 0.02), 0.3, 0.014)
     for k in range(7):                                                   # a coil of cable
         r = 0.26 + 0.012 * (k % 3)
@@ -817,8 +816,8 @@ def build_dressing(tr):
     tape.done('TapeMark', M['tape'])
     tape_w.done('TapeCrosses', M['tape_w'])
     # lettering on the walls
-    text('STAGE 01', 1.05, T((X0 + 0.012, -3.4, 1.05)) @ Matrix.Rotation(RAD(90), 4, 'Z') @ Matrix.Rotation(RAD(90), 4, 'X'), M['white_paint'], 'StageNo', 0.001)
-    text('YOURA STUDIOS', 0.8, T((X1 - 0.012, -3.4, 1.2)) @ Matrix.Rotation(RAD(-90), 4, 'Z') @ Matrix.Rotation(RAD(90), 4, 'X'), M['white_paint'], 'StudioName', 0.001)
+    text('STAGE 01', 0.82, T((X0 + 0.012, -5.25, 1.1)) @ Matrix.Rotation(RAD(90), 4, 'Z') @ Matrix.Rotation(RAD(90), 4, 'X'), M['white_paint'], 'StageNo', 0.001)
+    text('YOURA STUDIOS', 0.5, T((X1 - 0.012, -5.25, 1.25)) @ Matrix.Rotation(RAD(-90), 4, 'Z') @ Matrix.Rotation(RAD(90), 4, 'X'), M['white_paint'], 'StudioName', 0.001)
 
 
 def build_haze(density):
